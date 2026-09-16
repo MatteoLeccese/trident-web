@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main, development]
+  pull_request:
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      # Ningún secreto puede acabar en el bundle del navegador.
+      # El repo viejo enviaba NEXT_PUBLIC_APP_SECRET.
+      - name: No hay secretos en variables NEXT_PUBLIC_
+        run: |
+          if grep -rE 'NEXT_PUBLIC_[A-Z_]*SECRET' src/ .env.example.* 2>/dev/null ; then
+            echo "::error::Un secreto no puede viajar en una variable NEXT_PUBLIC_."
+            exit 1
+          fi
