@@ -8,6 +8,8 @@ import { QRCodeSVG } from "qrcode.react";
  * The code is large because it is typed with a remote control, from the sofa,
  * and the QR because another phone scans it. Both carry only the **read**
  * credential.
+ *
+ * Rendered only while the game holds a code: a finished game has released it.
  */
 export function JoinCodeCard ({ code, url }: { code: string; url: string; }) {
   return (

@@ -65,7 +65,9 @@ export default function PlayPage ({ params }: PageProps<"/play/[gameId]">) {
         <ConnectionBadge status={status} />
       </header>
 
-      <JoinCodeCard code={state.join_code} url={spectatorUrl} />
+      {state.join_code !== null && (
+        <JoinCodeCard code={state.join_code} url={spectatorUrl} />
+      )}
 
       <section className="space-y-3">
         <p className="text-sm text-muted-foreground">Tap a name to change it.</p>

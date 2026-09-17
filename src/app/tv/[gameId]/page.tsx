@@ -57,9 +57,11 @@ export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
       <header className="flex flex-wrap items-baseline justify-between gap-4">
         <h1 className="text-5xl font-bold tracking-tight">Trident</h1>
         <div className="flex items-center gap-6">
-          <p className="font-mono text-3xl tracking-[0.2em] tabular-nums text-muted-foreground">
-            {state.join_code}
-          </p>
+          {state.join_code !== null && (
+            <p className="font-mono text-3xl tracking-[0.2em] tabular-nums text-muted-foreground">
+              {state.join_code}
+            </p>
+          )}
           <ConnectionBadge status={status} />
         </div>
       </header>

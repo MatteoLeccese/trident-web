@@ -16,7 +16,9 @@ export interface GameState {
   game_id: string;
   version: number;
   status: GameStatus;
-  join_code: string;
+
+  /** Null once the game is over: a finished game releases its code. */
+  join_code: string | null;
   seats: Seat[];
   last_activity_at: string;
 }
