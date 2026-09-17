@@ -35,14 +35,14 @@ export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
   }, [ resync ]);
 
   if (loading) {
-    return <main className="flex flex-1 items-center justify-center p-[5vmin] text-3xl text-muted-foreground">Cargando…</main>;
+    return <main className="flex flex-1 items-center justify-center p-[5vmin] text-3xl text-muted-foreground">Loading…</main>;
   }
 
   if (state === null) {
     return (
       <main className="flex flex-1 items-center justify-center p-[5vmin]">
         <p role="alert" className="text-center text-3xl text-muted-foreground">
-          {error ?? "Esa partida no existe o ya ha terminado."}
+          {error ?? "That game does not exist or has already ended."}
         </p>
       </main>
     );
@@ -67,13 +67,13 @@ export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
       {isOver
         ? (
           <div className="flex flex-1 items-center justify-center">
-            <p className="text-6xl font-bold">Esta partida ha terminado</p>
+            <p className="text-6xl font-bold">This game has ended</p>
           </div>
         )
         : <SeatList seats={state.seats} size="tv" />}
 
       <footer className="font-mono text-lg text-muted-foreground">
-        versión {state.version} · {state.seats.length} jugadores
+        version {state.version} · {state.seats.length} players
       </footer>
     </main>
   );

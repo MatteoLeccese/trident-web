@@ -19,15 +19,15 @@ function isEnvelope (body: unknown): body is { message: string; error: string; d
 
 function toApiError (thrown: unknown): ApiError {
   if (!(thrown instanceof AxiosError)) {
-    return new ApiError(0, "internal_error", "Ha ocurrido un error inesperado.");
+    return new ApiError(0, "internal_error", "Something went wrong.");
   }
 
   if (thrown.response === undefined) {
     const timedOut = thrown.code === AxiosError.ECONNABORTED || thrown.code === AxiosError.ETIMEDOUT;
 
     return timedOut
-      ? new ApiError(0, "timeout", "El servidor ha tardado demasiado en responder.")
-      : new ApiError(0, "network_error", "No hemos podido conectar. Revisa tu conexión.");
+      ? new ApiError(0, "timeout", "The server took too long to answer.")
+      : new ApiError(0, "network_error", "We could not connect. Check your connection.");
   }
 
   const { status, data } = thrown.response;
@@ -37,7 +37,7 @@ function toApiError (thrown: unknown): ApiError {
   }
 
   // A 502 from a proxy returns HTML, not our envelope. It must not blow anything up.
-  return new ApiError(status, "internal_error", "El servidor ha devuelto una respuesta inesperada.");
+  return new ApiError(status, "internal_error", "The server sent back an unexpected response.");
 }
 
 /**

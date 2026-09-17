@@ -98,9 +98,9 @@ describe("forwardableHeaders", () => {
     // The server injects the credential from the httpOnly cookie.
     // If the browser could send its own, the whole model falls apart.
     const incoming = new Headers({
-      cookie: "trident_controller=secreto",
-      authorization: "Bearer inyectado",
-      "x-trident-controller-token": "robado",
+      cookie: "trident_controller=secret",
+      authorization: "Bearer injected",
+      "x-trident-controller-token": "stolen",
     });
 
     const forwarded = forwardableHeaders(incoming);

@@ -24,7 +24,7 @@ export function backendBaseUrl (): string {
   const configured = process.env.BACKEND_API_URL;
 
   if (configured === undefined || configured.trim() === "") {
-    throw new Error("Falta BACKEND_API_URL. El BFF no sabe a dónde hablar.");
+    throw new Error("BACKEND_API_URL is missing. The BFF does not know where to talk to.");
   }
 
   return configured.replace(/\/+$/, "");
@@ -38,19 +38,19 @@ export function backendBaseUrl (): string {
  */
 export function buildBackendUrl (base: string, segments: string[], search: string): string {
   if (segments.length === 0) {
-    throw new Error("El proxy necesita al menos un segmento de ruta.");
+    throw new Error("The proxy needs at least one path segment.");
   }
 
   for (const segment of segments) {
     if (segment === "" || segment === "." || segment === "..") {
-      throw new Error(`Segmento de ruta no permitido: '${segment}'.`);
+      throw new Error(`Path segment not allowed: '${segment}'.`);
     }
 
     // Whitelist: anything that does not match is left out. That covers in one go
     // slashes, backslashes, control characters, percent-encoding and any URL
     // scheme.
     if (!SEGMENT_PATTERN.test(segment)) {
-      throw new Error(`Segmento de ruta no permitido: '${segment}'.`);
+      throw new Error(`Path segment not allowed: '${segment}'.`);
     }
   }
 

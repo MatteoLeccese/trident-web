@@ -27,7 +27,7 @@ export async function POST (request: Request): Promise<Response> {
     return NextResponse.json(
       {
         status: 502,
-        message: "No hemos podido hablar con el servidor de la partida.",
+        message: "We could not reach the game server.",
         error: "backend_unreachable",
         data: null,
       },
@@ -40,7 +40,7 @@ export async function POST (request: Request): Promise<Response> {
   if (!response.ok || body === null) {
     return NextResponse.json(body ?? {
       status: response.status,
-      message: "No hemos podido crear la partida.",
+      message: "We could not create the game.",
       error: "backend_unreachable",
       data: null,
     }, { status: response.status });

@@ -36,12 +36,12 @@ export default function PlayPage ({ params }: PageProps<"/play/[gameId]">) {
       setEditing(null);
       setSaveError("");
     } catch (caught: unknown) {
-      setSaveError(isApiError(caught) ? messageForError(caught) : "No hemos podido guardar el nombre.");
+      setSaveError(isApiError(caught) ? messageForError(caught) : "We could not save the name.");
     }
   };
 
   if (loading) {
-    return <main className="flex flex-1 items-center justify-center p-8 text-muted-foreground">Cargando…</main>;
+    return <main className="flex flex-1 items-center justify-center p-8 text-muted-foreground">Loading…</main>;
   }
 
   if (error !== "" && state === null) {
@@ -61,27 +61,27 @@ export default function PlayPage ({ params }: PageProps<"/play/[gameId]">) {
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-8">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">La mesa</h1>
+        <h1 className="text-2xl font-bold tracking-tight">The table</h1>
         <ConnectionBadge status={status} />
       </header>
 
       <JoinCodeCard code={state.join_code} url={spectatorUrl} />
 
       <section className="space-y-3">
-        <p className="text-sm text-muted-foreground">Toca un nombre para cambiarlo.</p>
+        <p className="text-sm text-muted-foreground">Tap a name to change it.</p>
         <SeatList seats={state.seats} onRename={(seat) => { setEditing(seat); setDraft(seat.nickname); setSaveError(""); }} />
       </section>
 
       {editing !== null && (
         <section className="space-y-3 rounded-xl border border-accent bg-card p-4">
-          <p className="text-sm text-muted-foreground">Asiento {editing.seat}</p>
+          <p className="text-sm text-muted-foreground">Seat {editing.seat}</p>
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && void save()}
             maxLength={24}
             autoFocus
-            aria-label="Nuevo nombre"
+            aria-label="New name"
             className="w-full rounded-lg border border-border bg-background px-3 py-2 outline-none focus-visible:border-accent"
           />
           {saveError !== "" && <p role="alert" className="text-sm text-destructive">{saveError}</p>}
@@ -91,21 +91,21 @@ export default function PlayPage ({ params }: PageProps<"/play/[gameId]">) {
               onClick={() => void save()}
               className="flex-1 rounded-lg bg-primary py-2 font-medium text-primary-foreground"
             >
-              Guardar
+              Save
             </button>
             <button
               type="button"
               onClick={() => setEditing(null)}
               className="rounded-lg border border-border px-4 py-2"
             >
-              Cancelar
+              Cancel
             </button>
           </div>
         </section>
       )}
 
       <p className="font-mono text-xs text-muted-foreground">
-        versión {state.version} · {state.seats.length} jugadores
+        version {state.version} · {state.seats.length} players
       </p>
     </main>
   );

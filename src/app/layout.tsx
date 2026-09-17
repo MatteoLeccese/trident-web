@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Trident",
-  description: "Un juego de dominó para jugar con amigos alrededor de una mesa.",
+  description: "A domino game to play with friends around a table.",
 };
 
 export const viewport: Viewport = {
@@ -32,7 +32,7 @@ export const viewport: Viewport = {
 export default function RootLayout ({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="es"
+      lang="en"
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >

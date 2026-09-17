@@ -40,7 +40,7 @@ export function useGameState (gameId: string): UseGameState {
       setState(applyGameState(latest.current, fresh).state);
       setError(null);
     } catch (caught: unknown) {
-      setError(isApiError(caught) ? messageForError(caught) : "No hemos podido cargar la partida.");
+      setError(isApiError(caught) ? messageForError(caught) : "We could not load the game.");
     } finally {
       setLoading(false);
     }

@@ -44,7 +44,7 @@ async function proxy (request: Request, context: RouteContext): Promise<Response
     return NextResponse.json(
       {
         status: 502,
-        message: "No hemos podido hablar con el servidor de la partida.",
+        message: "We could not reach the game server.",
         error: "backend_unreachable",
         data: null,
       },

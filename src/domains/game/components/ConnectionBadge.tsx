@@ -11,9 +11,9 @@ import type { ChannelStatus } from "@/domains/game/hooks/useGameChannel";
  */
 export function ConnectionBadge ({ status }: { status: ChannelStatus; }) {
   const label = {
-    connecting: "Conectando…",
-    connected: "En vivo",
-    offline: "Sin conexión",
+    connecting: "Connecting…",
+    connected: "Live",
+    offline: "Offline",
   }[status];
 
   return (

@@ -52,7 +52,7 @@ describe("the api client", () => {
   it("turns an enveloped error into an ApiError", async () => {
     respondWith(422, {
       status: 422,
-      message: "No es tu turno.",
+      message: "Not your turn.",
       error: "not_your_turn",
       data: null,
     });
@@ -62,7 +62,7 @@ describe("the api client", () => {
       const apiError = error as ApiError;
       expect(apiError.status).toBe(422);
       expect(apiError.errorCode).toBe("not_your_turn");
-      expect(apiError.message).toBe("No es tu turno.");
+      expect(apiError.message).toBe("Not your turn.");
 
       return true;
     });
@@ -71,7 +71,7 @@ describe("the api client", () => {
   it("keeps the recovery data so a stale client can self-heal", async () => {
     respondWith(422, {
       status: 422,
-      message: "Estado obsoleto.",
+      message: "Stale state.",
       error: "game_version_conflict",
       data: { version: 47 },
     });
@@ -117,7 +117,7 @@ describe("the api client", () => {
     // Everything that comes out of here is an ApiError, so the screens only
     // need to know about one error type.
     const cases = [
-      () => respondWith(404, { status: 404, message: "No existe.", error: "not_found", data: null }),
+      () => respondWith(404, { status: 404, message: "Does not exist.", error: "not_found", data: null }),
       () => respondWith(500, "boom"),
       () => failWith(AxiosError.ERR_NETWORK),
     ];

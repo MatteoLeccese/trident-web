@@ -25,7 +25,7 @@ export default function TvEntryPage () {
 
       router.push(`/tv/${game.game_id}`);
     } catch (caught: unknown) {
-      setError(isApiError(caught) ? messageForError(caught) : "No hemos encontrado esa partida.");
+      setError(isApiError(caught) ? messageForError(caught) : "We could not find that game.");
       setLooking(false);
     }
   };
@@ -33,7 +33,7 @@ export default function TvEntryPage () {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 p-[5vmin]">
       <h1 className="text-center text-4xl font-bold tracking-tight sm:text-5xl">
-        Escribe el código de la partida
+        Type the game code
       </h1>
 
       <input
@@ -42,7 +42,7 @@ export default function TvEntryPage () {
         onKeyDown={(e) => e.key === "Enter" && void open()}
         maxLength={8}
         autoFocus
-        aria-label="Código de la partida"
+        aria-label="Game code"
         placeholder="K7QP3M"
         className="w-full max-w-md rounded-xl border-2 border-border bg-card px-6 py-5 text-center font-mono text-5xl tracking-[0.2em] outline-none focus-visible:border-accent"
       />
@@ -55,7 +55,7 @@ export default function TvEntryPage () {
         onClick={() => void open()}
         className="rounded-xl bg-primary px-10 py-4 text-2xl font-semibold text-primary-foreground disabled:opacity-40"
       >
-        {looking ? "Buscando…" : "Ver la partida"}
+        {looking ? "Looking…" : "Watch the game"}
       </button>
     </main>
   );

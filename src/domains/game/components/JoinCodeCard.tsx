@@ -12,7 +12,7 @@ import { QRCodeSVG } from "qrcode.react";
 export function JoinCodeCard ({ code, url }: { code: string; url: string; }) {
   return (
     <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-card p-6 text-center">
-      <p className="text-sm text-muted-foreground">Abre esto en el televisor</p>
+      <p className="text-sm text-muted-foreground">Open this on the television</p>
 
       <p className="font-mono text-4xl font-bold tracking-[0.2em] tabular-nums">{code}</p>
 

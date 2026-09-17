@@ -6,7 +6,7 @@ describe("messageForError", () => {
   it("translates a known machine code to a friendly message", () => {
     const message = messageForError(new ApiError(422, "not_your_turn", "Not your turn."));
 
-    expect(message).toBe("No es tu turno todavía.");
+    expect(message).toBe("It is not your turn yet.");
     expect(message).not.toBe("Not your turn.");
   });
 
@@ -14,13 +14,13 @@ describe("messageForError", () => {
     // Rule: the client branches on the code, but if it does not know it,
     // the backend's message is better than a useless generic one.
     expect(
-      messageForError(new ApiError(422, "some_future_code", "Algo muy específico pasó.")),
-    ).toBe("Algo muy específico pasó.");
+      messageForError(new ApiError(422, "some_future_code", "Something very specific happened.")),
+    ).toBe("Something very specific happened.");
   });
 
   it("falls back to a generic message when there is neither a known code nor a message", () => {
     expect(messageForError(new ApiError(500, "", ""))).toBe(
-      "Ha ocurrido un error inesperado. Vuelve a intentarlo.",
+      "Something went wrong. Give it another go.",
     );
   });
 
@@ -28,7 +28,7 @@ describe("messageForError", () => {
     const cases = [
       new ApiError(422, "not_your_turn", ""),
       new ApiError(500, "", ""),
-      new ApiError(418, "algo_desconocido", ""),
+      new ApiError(418, "some_unknown_code", ""),
       new ApiError(404, "not_found", ""),
     ];
 
@@ -50,7 +50,7 @@ describe("messageForError", () => {
 
     for (const code of emittedByKernel) {
       expect(messageForError(new ApiError(400, code, "")))
-        .not.toBe("Ha ocurrido un error inesperado. Vuelve a intentarlo.");
+        .not.toBe("Something went wrong. Give it another go.");
     }
   });
 });

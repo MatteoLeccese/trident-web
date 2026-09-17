@@ -32,6 +32,14 @@ interface Options {
  * - `authEndpoint` points at the same-origin BFF, because pusher-js does not
  *   send credentials to another origin and the cookie would not travel.
  */
+function reverbHost (): string {
+  const configured = process.env.NEXT_PUBLIC_REVERB_HOST;
+
+  return configured !== undefined && configured !== ""
+    ? configured
+    : window.location.hostname;
+}
+
 export function useGameChannel ({ gameId, onState, onReconnect }: Options): ChannelStatus {
   const [ status, setStatus ] = useState<ChannelStatus>("connecting");
 
@@ -44,7 +52,11 @@ export function useGameChannel ({ gameId, onState, onReconnect }: Options): Chan
       broadcaster: "reverb",
       Pusher,
       key: process.env.NEXT_PUBLIC_REVERB_APP_KEY ?? "",
-      wsHost: process.env.NEXT_PUBLIC_REVERB_HOST ?? window.location.hostname,
+      // Deliberately falls back to the host the page was loaded from. A
+      // NEXT_PUBLIC_ variable is inlined at build time, so pinning the LAN IP
+      // there would mean rebuilding the image every time the network changes.
+      // The browser already knows where it came from.
+      wsHost: reverbHost(),
       wsPort: Number(process.env.NEXT_PUBLIC_REVERB_PORT ?? 8080),
       forceTLS: false,
       enabledTransports: [ "ws" ],

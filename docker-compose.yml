@@ -1,0 +1,25 @@
+# The web app joins the network the API owns, per golden rule 5.
+# Bring the API stack up first.
+
+name: trident-web
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        # Must match REVERB_APP_KEY on the API side.
+        NEXT_PUBLIC_REVERB_APP_KEY: ${NEXT_PUBLIC_REVERB_APP_KEY:-trident-local}
+    environment:
+      # Server-side only, never prefixed with NEXT_PUBLIC_: the browser talks to
+      # this app's own BFF, and the BFF talks to Laravel by container name.
+      BACKEND_API_URL: http://api:8000/api/v1
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    networks: [trident-net]
+
+networks:
+  trident-net:
+    name: trident-net
+    external: true
