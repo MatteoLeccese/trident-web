@@ -17,6 +17,13 @@ import { messageForError } from "@/lib/error-codes";
  *
  * The control stays disabled for the whole call, retries included, so the person
  * is never the retry mechanism.
+ *
+ * **And the hook refuses a second call while one is in flight.** The pending
+ * flag cannot do that job by itself: two activations inside one React batch both
+ * read the same `false`, so both pass any guard written against it, and two
+ * intentions mean two request ids and two writes. A ref changes before the
+ * second one is handled — the same reason `useTurnSequence` keeps one for the
+ * draw.
  */
 
 export interface Write {
@@ -34,6 +41,7 @@ export function useWrite (receive: (state: GameState) => void): Write {
   const [ error, setError ] = useState<string | null>(null);
   const receiveRef = useRef(receive);
   const alive = useRef(true);
+  const inFlight = useRef(false);
 
   useEffect(() => {
     receiveRef.current = receive;
@@ -48,6 +56,12 @@ export function useWrite (receive: (state: GameState) => void): Write {
   }, []);
 
   const run = useCallback(async (call: () => Promise<MutationResult>): Promise<boolean> => {
+    if (inFlight.current) {
+      return false;
+    }
+
+    inFlight.current = true;
+
     setPending(true);
     setError(null);
 
@@ -72,6 +86,8 @@ export function useWrite (receive: (state: GameState) => void): Write {
 
       return false;
     } finally {
+      inFlight.current = false;
+
       if (alive.current) {
         setPending(false);
       }

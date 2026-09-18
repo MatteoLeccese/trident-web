@@ -10,6 +10,10 @@ services:
       args:
         # Must match REVERB_APP_KEY on the API side.
         NEXT_PUBLIC_REVERB_APP_KEY: ${NEXT_PUBLIC_REVERB_APP_KEY:-trident-local}
+        # Inlined at build time like every NEXT_PUBLIC_ value, so it belongs here
+        # and not under `environment:` — set there it would change nothing and
+        # read as though it did.
+        NEXT_PUBLIC_TRIDENT_RECONCILE_POLL_MS: ${NEXT_PUBLIC_TRIDENT_RECONCILE_POLL_MS:-}
     environment:
       # Server-side only, never prefixed with NEXT_PUBLIC_: the browser talks to
       # this app's own BFF, and the BFF talks to Laravel by container name.

@@ -74,7 +74,13 @@ export function Lobby ({ gameId, state, receive, spectatorUrl }: Props) {
             <input
               value={draft}
               onChange={(event) => setDraft(event.target.value)}
-              onKeyDown={(event) => event.key === "Enter" && void save()}
+              // Held while a save is on its way, like the button beside it: a
+              // key that is not is a key a finger can repeat.
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && !rename.pending) {
+                  void save();
+                }
+              }}
               maxLength={24}
               autoFocus
               aria-label="New name"

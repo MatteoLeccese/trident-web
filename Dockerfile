@@ -14,11 +14,20 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# NEXT_PUBLIC_* are inlined into the bundle here, at build time. Only the Reverb
-# app key needs to be — the host is resolved in the browser from the page's own
-# origin, so the image does not have to be rebuilt when the LAN address changes.
+# NEXT_PUBLIC_* are inlined into the bundle here, at BUILD time, not read at
+# run time. Anything documented as a per-deployment value has to arrive as a
+# build argument or it silently keeps its default in the image, which is the way
+# this product actually runs.
+#
+# The Reverb host is deliberately not among them: it is resolved in the browser
+# from the page's own origin, so the image survives the LAN address changing.
 ARG NEXT_PUBLIC_REVERB_APP_KEY=trident-local
 ENV NEXT_PUBLIC_REVERB_APP_KEY=${NEXT_PUBLIC_REVERB_APP_KEY}
+
+# How often the television reconciles no matter what its socket claims. Empty
+# keeps the documented default, which is what the code falls back to.
+ARG NEXT_PUBLIC_TRIDENT_RECONCILE_POLL_MS=
+ENV NEXT_PUBLIC_TRIDENT_RECONCILE_POLL_MS=${NEXT_PUBLIC_TRIDENT_RECONCILE_POLL_MS}
 
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build

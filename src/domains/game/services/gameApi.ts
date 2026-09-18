@@ -1,8 +1,9 @@
 import { api } from "@/domains/core/services/api";
-import { ApiError } from "@/domains/core/types/api-error";
+import { ApiError, isApiError } from "@/domains/core/types/api-error";
 import type { ApiResponse } from "@/domains/core/types";
 import type { ConfigValue, CreatedGame, GameState, RoomConfigSpec } from "@/domains/game/types";
-import { mutate, type MutationResult } from "@/domains/game/services/writeProtocol";
+import { writeFailed, writeLanded } from "@/domains/game/services/writeHealth";
+import { type Mutation, type MutationResult, mutate } from "@/domains/game/services/writeProtocol";
 
 /**
  * Three paths, on purpose:
@@ -16,6 +17,38 @@ import { mutate, type MutationResult } from "@/domains/game/services/writeProtoc
  *   it has a job the generic proxy cannot do: keep the `controller_token` and
  *   strip it from the response.
  */
+/**
+ * Every write of the game, through the one protocol, recording whether the
+ * server answered.
+ *
+ * `mutate` stays pure and testable without a network; the record of what came
+ * back is taken here, which is the single edge every write already passes
+ * through. Recording it inside the protocol would make the protocol impure by
+ * default, and recording it in the two hooks that call this would put one fact
+ * in two hands.
+ *
+ * **A refusal is an answer.** A stale version and a rejected value both mean the
+ * server is alive and talking, and only a write that never reached one at all —
+ * a timeout, a dead network, a 5xx past its retries — says otherwise.
+ */
+async function write (mutation: Mutation): Promise<MutationResult> {
+  try {
+    const result = await mutate(mutation);
+
+    writeLanded();
+
+    return result;
+  } catch (caught: unknown) {
+    if (isApiError(caught) && caught.status > 0 && caught.status < 500) {
+      writeLanded();
+    } else {
+      writeFailed();
+    }
+
+    throw caught;
+  }
+}
+
 async function postToBff<T> (path: string, body: unknown): Promise<T> {
   const response = await fetch(path, {
     method: "POST",
@@ -50,8 +83,12 @@ export const gameApi = {
    * rotates the cookie and strips the token before this ever resolves.
    *
    * It carries neither a request id nor an expected version, and it is not a
-   * `mutate`: it writes nothing to the game it is asked from, so there is no
-   * version to guard and no snapshot a repeat could be answered with.
+   * `mutate`. It does write to the game it is asked from — that game is
+   * abandoned to make room for the new one — but a repeat could not be answered
+   * with the bytes of the first attempt, because those bytes carry a credential
+   * that is stored only as a hash. A repeated tap therefore opens a second game,
+   * which the table leaves behind and the server later expires. The button is
+   * held for the whole call, which is what stops the repeat in practice.
    */
   playAgain: (gameId: string): Promise<CreatedGame> =>
     postToBff<CreatedGame>(`/api/games/${gameId}/play-again`, {}),
@@ -71,11 +108,11 @@ export const gameApi = {
     (await api.get<ApiResponse<RoomConfigSpec>>(`/games/${gameId}/room-config-spec`)).data.data,
 
   renameSeat: (gameId: string, seat: number, nickname: string, expectedVersion: number): Promise<MutationResult> =>
-    mutate({ method: "patch", path: `/games/${gameId}/seats/${seat}`, body: { nickname }, expectedVersion }),
+    write({ method: "patch", path: `/games/${gameId}/seats/${seat}`, body: { nickname }, expectedVersion }),
 
   /** An absolute permutation of the ring, which is what makes a repeat harmless. */
   reorderSeats: (gameId: string, order: number[], expectedVersion: number): Promise<MutationResult> =>
-    mutate({ method: "put", path: `/games/${gameId}/seats/order`, body: { order }, expectedVersion }),
+    write({ method: "put", path: `/games/${gameId}/seats/order`, body: { order }, expectedVersion }),
 
   /**
    * The whole settings map, flat and dotted, exactly as the spec declares its
@@ -87,10 +124,10 @@ export const gameApi = {
     roomConfig: Record<string, ConfigValue>,
     expectedVersion: number,
   ): Promise<MutationResult> =>
-    mutate({ method: "post", path: `/games/${gameId}/room-config`, body: { room_config: roomConfig }, expectedVersion }),
+    write({ method: "post", path: `/games/${gameId}/room-config`, body: { room_config: roomConfig }, expectedVersion }),
 
   start: (gameId: string, expectedVersion: number): Promise<MutationResult> =>
-    mutate({ method: "post", path: `/games/${gameId}/start`, expectedVersion }),
+    write({ method: "post", path: `/games/${gameId}/start`, expectedVersion }),
 
   /**
    * A draw names a position and nothing else: no seat, because the server
@@ -98,5 +135,5 @@ export const gameApi = {
    * cannot name one it has not seen.
    */
   draw: (gameId: string, position: number, expectedVersion: number): Promise<MutationResult> =>
-    mutate({ method: "post", path: `/games/${gameId}/pool/${position}/draw`, expectedVersion }),
+    write({ method: "post", path: `/games/${gameId}/pool/${position}/draw`, expectedVersion }),
 };

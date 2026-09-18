@@ -16,6 +16,7 @@ import { useGameChannel } from "@/domains/game/hooks/useGameChannel";
 import { useGameState } from "@/domains/game/hooks/useGameState";
 import { useReconcile } from "@/domains/game/hooks/useReconcile";
 import { useRoomConfigSpec } from "@/domains/game/hooks/useRoomConfigSpec";
+import { useWriteHealth } from "@/domains/game/hooks/useWriteHealth";
 import { useTurnSequence } from "@/domains/game/hooks/useTurnSequence";
 import { gameApi } from "@/domains/game/services/gameApi";
 import { boardIsMounted, phoneSeat } from "@/domains/game/utils/turnSequence";
@@ -57,9 +58,34 @@ export default function PlayPage ({ params }: PageProps<"/play/[gameId]">) {
 
   const reconcile = useCallback(() => void resync(), [ resync ]);
 
-  const status = useGameChannel({ gameId, onState: receive, onReconnect: reconcile });
+  /*
+   * A game that has ended writes nothing more and hears nothing more, so the
+   * socket is closed and the poll stops. A phone left on the end screen would
+   * otherwise hold a connection open in somebody's pocket for the rest of the
+   * night.
+   */
+  const settled = state !== null && (state.status === "finished" || state.status === "abandoned");
 
-  useReconcile({ resync: reconcile, everyMs: status === "connected" ? null : OFFLINE_POLL_MS });
+  const status = useGameChannel({
+    gameId,
+    onState: receive,
+    onReconnect: reconcile,
+    enabled: !settled,
+  });
+
+  /*
+   * What the phone's writes are doing, which is not what its socket is doing.
+   * The phone is the only client that writes and the only one a table cannot
+   * carry on without, so this is the half of "is this screen working" that its
+   * badge could not answer before.
+   */
+  const writes = useWriteHealth(gameId);
+
+  useReconcile({
+    resync: reconcile,
+    everyMs: status === "connected" ? null : OFFLINE_POLL_MS,
+    enabled: !settled,
+  });
 
   const turn = useTurnSequence({ gameId, state, receive });
 
@@ -166,7 +192,7 @@ export default function PlayPage ({ params }: PageProps<"/play/[gameId]">) {
     <main className="mx-auto flex min-h-0 w-full max-w-lg flex-1 flex-col gap-4 overflow-y-auto px-4 py-6">
       <header className="flex items-center justify-between gap-4">
         <h1 className="text-xl font-bold tracking-tight">Trident</h1>
-        <ConnectionBadge status={status} />
+        <ConnectionBadge status={status} writes={writes} />
       </header>
 
       <CurrentPlayer

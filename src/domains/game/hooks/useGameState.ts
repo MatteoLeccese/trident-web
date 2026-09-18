@@ -43,6 +43,9 @@ export function useGameState (gameId: string): UseGameState {
    */
   const latest = useRef<GameState | null>(null);
 
+  /** Whether a read is already on its way, so the recovery paths cannot stack up. */
+  const reading = useRef(false);
+
   /** The one place a snapshot is accepted. @returns whether a frame went missing. */
   const apply = useCallback((incoming: GameState): boolean => {
     const result = applyGameState(latest.current, incoming);
@@ -54,6 +57,25 @@ export function useGameState (gameId: string): UseGameState {
   }, []);
 
   const resync = useCallback(async () => {
+
+    /*
+     * One read at a time.
+     *
+     * Every recovery path calls this — the interval, waking up, coming back
+     * online, a frame with a gap in it, a frame that was not a snapshot — and
+     * the request's own timeout is longer than the phone's three-second poll, so
+     * without this they stack up: several reads of the same game in flight at
+     * once, each spending the table's shared rate limit, and each racing the
+     * others to write its answer back. Dropping the second call is right rather
+     * than merely cheap, because the one already in flight is asking exactly the
+     * same question and its answer will be at least as new.
+     */
+    if (reading.current) {
+      return;
+    }
+
+    reading.current = true;
+
     try {
       const fresh = await gameApi.get(gameId);
 
@@ -64,6 +86,7 @@ export function useGameState (gameId: string): UseGameState {
     } catch (caught: unknown) {
       setError(isApiError(caught) ? messageForError(caught) : "We could not load the game.");
     } finally {
+      reading.current = false;
       setLoading(false);
     }
   }, [ apply, gameId ]);

@@ -56,9 +56,23 @@ export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
 
   const reconcile = useCallback(() => void resync(), [ resync ]);
 
-  const status = useGameChannel({ gameId, onState: receive, onReconnect: reconcile });
+  /*
+   * A game that has ended has published its last version, so both recoveries are
+   * switched off: the socket is closed rather than held open all night, and the
+   * poll stops asking for a snapshot that can never change again. Left running,
+   * a television abandoned on a finished game would keep a connection and two
+   * requests a minute going until somebody unplugged it.
+   */
+  const settled = state !== null && (state.status === "finished" || state.status === "abandoned");
 
-  useReconcile({ resync: reconcile, everyMs: RECONCILE_MS });
+  const status = useGameChannel({
+    gameId,
+    onState: receive,
+    onReconnect: reconcile,
+    enabled: !settled,
+  });
+
+  useReconcile({ resync: reconcile, everyMs: RECONCILE_MS, enabled: !settled });
 
   /*
    * The declaration a challenge card takes its title from. It is read once and
@@ -69,9 +83,7 @@ export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
   const { spec } = useRoomConfigSpec(gameId);
 
   const holdingLastTurn = useFinalBeat(
-    state === null
-      ? "unknown"
-      : state.status === "finished" || state.status === "abandoned" ? "over" : "live",
+    state === null ? "unknown" : settled ? "over" : "live",
     FINAL_BEAT_MS,
   );
 
@@ -93,7 +105,9 @@ export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
     );
   }
 
-  const isOver = state.status === "finished" || state.status === "abandoned";
+  // Named again after the early returns purely so the branches below read as
+  // branches: it is the same answer the hooks above were given.
+  const isOver = settled;
   const inPlay = state.status === "running" || state.status === "awaiting_choice";
 
   // Whether anything will be painted, rather than whether anything was sent: an
@@ -115,10 +129,18 @@ export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
         </div>
       </header>
 
-      <IdleNotice
-        lastActivityAt={state.last_activity_at}
-        noticeMinutes={state.tv_idle_notice_minutes}
-      />
+      {/*
+        * Only while the game can still go somewhere. `last_activity_at` freezes
+        * with the last write, so on a game that ended properly the notice starts
+        * counting the moment the room finished playing and crowns the record of
+        * the evening with "this may have been left behind" a few minutes later.
+        */}
+      {!isOver && (
+        <IdleNotice
+          lastActivityAt={state.last_activity_at}
+          noticeMinutes={state.tv_idle_notice_minutes}
+        />
+      )}
 
       {/*
         * The server's cursor, in every state and never anybody else's. It sits

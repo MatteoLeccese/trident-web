@@ -27,6 +27,76 @@ describe("asking the server again", () => {
     expect(resync).toHaveBeenCalledTimes(3);
   });
 
+  it("stops entirely on a game that has ended", () => {
+
+    /*
+     * A terminal snapshot is the last one there will ever be. Left running, both
+     * screens would spend the rest of the night asking for a state that cannot
+     * change and throwing the answer away at the version guard — and a
+     * television abandoned on a finished game would do it until somebody
+     * unplugged it.
+     */
+    const resync = vi.fn();
+
+    renderHook(() => useReconcile({ resync, everyMs: 1000, enabled: false }));
+
+    act(() => vi.advanceTimersByTime(60_000));
+
+    becomesVisible("visible");
+
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+      window.dispatchEvent(new Event("pageshow"));
+    });
+
+    expect(resync).not.toHaveBeenCalled();
+  });
+
+  it("still listens for coming back when it has no interval", () => {
+    // `everyMs: null` is the phone with a healthy socket, which wants no poll
+    // and does want to be told when it is handed to somebody else. That is a
+    // different thing from a game that has ended, and conflating the two takes
+    // the phone's recovery away.
+    const resync = vi.fn();
+
+    renderHook(() => useReconcile({ resync, everyMs: null }));
+
+    becomesVisible("visible");
+
+    expect(resync).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks again when the network comes back", () => {
+    // A phone that walked out of range and back changes no visibility at all.
+    const resync = vi.fn();
+
+    renderHook(() => useReconcile({ resync, everyMs: null }));
+
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+
+    act(() => {
+      window.dispatchEvent(new Event("online"));
+    });
+
+    expect(resync).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks again when a page is restored from the back-forward cache", () => {
+    // Restored holding whatever snapshot it was put away with, and firing no
+    // navigation of any kind.
+    const resync = vi.fn();
+
+    renderHook(() => useReconcile({ resync, everyMs: null }));
+
+    Object.defineProperty(document, "visibilityState", { value: "visible", configurable: true });
+
+    act(() => {
+      window.dispatchEvent(new Event("pageshow"));
+    });
+
+    expect(resync).toHaveBeenCalledTimes(1);
+  });
+
   it("does not poll at all when it is told not to", () => {
     // The phone's battery is the constraint, and every write it makes already
     // answers with a fresh snapshot.

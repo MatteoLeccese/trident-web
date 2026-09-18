@@ -16,8 +16,15 @@ import { useEffect, useRef } from "react";
  *   degrade to one interval of delay instead of to a frozen screen. The phone
  *   polls only while its socket is down, because its battery is the constraint
  *   and every write already answers with a fresh snapshot.
- * - **Coming back into view.** The phone was locked and has been handed to
- *   somebody else; the television woke up.
+ * - **Coming back.** The phone was locked and has been handed to somebody else;
+ *   the television woke up; the wifi came back. Three different events, because
+ *   they are three different things: a laptop that wakes from sleep with the lid
+ *   already open changes no visibility, and a network that returns changes
+ *   neither.
+ *
+ * **Neither runs on a game that has ended.** A terminal snapshot is the last one
+ * there will ever be, so both screens would otherwise spend the rest of the
+ * night asking for it again and throwing the answer away at the version guard.
  */
 
 /**
@@ -41,11 +48,26 @@ export function pollIntervalMs (raw: string | undefined, fallback: number): numb
 interface Options {
   resync: () => void;
 
-  /** Milliseconds between polls, or null to poll not at all. */
+  /**
+   * Milliseconds between polls, or null to poll not at all.
+   *
+   * Null is the phone with a healthy socket: it has no interval and still wants
+   * to be told when it comes back, which is why that case is separate from
+   * `enabled`.
+   */
   everyMs: number | null;
+
+  /**
+   * Whether this screen can still learn anything.
+   *
+   * False on a game that has reached a terminal status: that snapshot is the
+   * last one there will ever be, so neither the interval nor waking up has
+   * anything to ask for.
+   */
+  enabled?: boolean;
 }
 
-export function useReconcile ({ resync, everyMs }: Options): void {
+export function useReconcile ({ resync, everyMs, enabled = true }: Options): void {
   const latest = useRef(resync);
 
   useEffect(() => {
@@ -53,24 +75,41 @@ export function useReconcile ({ resync, everyMs }: Options): void {
   });
 
   useEffect(() => {
-    if (everyMs === null || everyMs <= 0) {
+    if (!enabled || everyMs === null || everyMs <= 0) {
       return;
     }
 
     const timer = setInterval(() => latest.current(), everyMs);
 
     return () => clearInterval(timer);
-  }, [ everyMs ]);
+  }, [ enabled, everyMs ]);
 
   useEffect(() => {
-    const onVisible = () => {
+    if (!enabled) {
+      // Nothing left to reconcile with: a screen whose game has ended holds the
+      // final state and no event can produce another one.
+      return;
+    }
+
+    const wake = () => {
       if (document.visibilityState === "visible") {
         latest.current();
       }
     };
 
-    document.addEventListener("visibilitychange", onVisible);
+    /*
+     * `pageshow` rather than `load`: a phone restored from the back/forward
+     * cache fires no navigation at all, and it is restored holding a snapshot
+     * from whenever it was put away.
+     */
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("online", wake);
+    window.addEventListener("pageshow", wake);
 
-    return () => document.removeEventListener("visibilitychange", onVisible);
-  }, []);
+    return () => {
+      document.removeEventListener("visibilitychange", wake);
+      window.removeEventListener("online", wake);
+      window.removeEventListener("pageshow", wake);
+    };
+  }, [ enabled ]);
 }

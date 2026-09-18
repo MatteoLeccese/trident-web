@@ -3,8 +3,17 @@
 import { useEffect, useState } from "react";
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
+import { type ChannelStatus, useSettledStatus } from "@/domains/game/hooks/useSettledStatus";
 
-export type ChannelStatus = "connecting" | "connected" | "offline";
+export type { ChannelStatus };
+
+/**
+ * How long a reconnection has to hold before the screen believes it.
+ *
+ * Ten seconds is longer than the flap of a phone changing cell and shorter than
+ * anybody waits before tapping again.
+ */
+const SETTLE_MS = 10_000;
 
 interface Options {
   gameId: string;
@@ -17,6 +26,16 @@ interface Options {
 
   /** Called on (re)connect: reconnection resyncs through the same route as the load. */
   onReconnect: () => void;
+
+  /**
+   * Whether this screen still has anything to hear.
+   *
+   * False once the game has reached a terminal status: the state can never
+   * change again, so the socket is closed rather than held open all night for a
+   * frame that is not coming. The status stops moving with it, which is honest —
+   * on a game that has ended, "is this screen current?" is answered permanently.
+   */
+  enabled?: boolean;
 }
 
 /**
@@ -44,11 +63,11 @@ function reverbHost (): string {
     : window.location.hostname;
 }
 
-export function useGameChannel ({ gameId, onState, onReconnect }: Options): ChannelStatus {
+export function useGameChannel ({ gameId, onState, onReconnect, enabled = true }: Options): ChannelStatus {
   const [ status, setStatus ] = useState<ChannelStatus>("connecting");
 
   useEffect(() => {
-    if (gameId === "") {
+    if (gameId === "" || !enabled) {
       return;
     }
 
@@ -88,7 +107,13 @@ export function useGameChannel ({ gameId, onState, onReconnect }: Options): Chan
       // `leave` does not close the socket: without this, one connection leaks per mount.
       echo.disconnect();
     };
-  }, [ gameId, onState, onReconnect ]);
+  }, [ gameId, onState, onReconnect, enabled ]);
 
-  return status;
+  /*
+   * `onReconnect` fires on the RAW event above and never on the settled one: a
+   * screen that has just reconnected should resync immediately, whether or not
+   * it is willing to say out loud yet that it is healthy. Only what the room is
+   * told is smoothed.
+   */
+  return useSettledStatus(status, SETTLE_MS);
 }
