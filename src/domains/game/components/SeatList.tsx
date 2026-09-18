@@ -15,11 +15,12 @@ export function SeatList ({ seats, size = "phone", onRename }: Props) {
   const isTv = size === "tv";
 
   return (
-    <ul className={cn("grid gap-2", isTv && "gap-4 sm:grid-cols-2")}>
+    <ul data-seat-list="" className={cn("grid gap-2", isTv && "gap-4 sm:grid-cols-2")}>
       {seats.map((seat) => (
         <li key={seat.seat}>
           <button
             type="button"
+            data-seat={seat.seat}
             disabled={onRename === undefined}
             onClick={() => onRename?.(seat)}
             className={cn(

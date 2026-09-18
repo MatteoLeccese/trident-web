@@ -3,13 +3,17 @@
 import { useEffect, useState } from "react";
 import Echo from "laravel-echo";
 import Pusher from "pusher-js";
-import type { GameState } from "@/domains/game/types";
 
 export type ChannelStatus = "connecting" | "connected" | "offline";
 
 interface Options {
   gameId: string;
-  onState: (state: GameState) => void;
+
+  /**
+   * Untyped on purpose: what arrives here is whatever came down the socket. The
+   * receiver checks it before it can replace the state of a table in play.
+   */
+  onState: (state: unknown) => void;
 
   /** Called on (re)connect: reconnection resyncs through the same route as the load. */
   onReconnect: () => void;
@@ -75,7 +79,7 @@ export function useGameChannel ({ gameId, onState, onReconnect }: Options): Chan
     connection.bind("failed", () => setStatus("offline"));
     connection.bind("disconnected", () => setStatus("offline"));
 
-    echo.join(`game.${gameId}`).listen(".GameStateChanged", (payload: GameState) => {
+    echo.join(`game.${gameId}`).listen(".GameStateChanged", (payload: unknown) => {
       onState(payload);
     });
 

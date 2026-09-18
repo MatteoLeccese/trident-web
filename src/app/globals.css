@@ -3,12 +3,12 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
- * Paleta tomada de los materiales del juego: fichas de hueso, pips negros y
- * el tapete verde de la mesa, con un latón cálido como acento.
+ * A palette taken from the game's own materials: bone tiles, black pips and the
+ * green baize of the table, with warm brass as the accent.
  *
- * Todos los tokens se declaran aquí en `:root`. `.dark` sólo los redefine, de
- * modo que ningún componente conoce un color literal: usan clases semánticas
- * (`bg-card`, `text-muted-foreground`) y el modo oscuro sale gratis.
+ * Every token is declared here on `:root`, and `.dark` only redefines them, so
+ * no component knows a literal colour: they use semantic classes (`bg-card`,
+ * `text-muted-foreground`) and dark mode comes for nothing.
  */
 :root {
   --background: oklch(0.970 0.008 140);
@@ -34,7 +34,7 @@
 
   --success: oklch(0.480 0.100 155);
 
-  /* Las fichas son de hueso en los dos temas: es su material. */
+  /* The tiles are bone in both themes: that is what they are made of. */
   --tile-face: oklch(0.975 0.010 95);
   --tile-pip: oklch(0.230 0.030 158);
   --tile-edge: oklch(0.860 0.015 110);
@@ -104,12 +104,102 @@ body {
   color: var(--foreground);
 }
 
-/* El televisor está a tres metros en una habitación a media luz. */
+/* The television is three metres away in a room with the lights down. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
   }
+}
+
+/*
+ * Salon legibility: the sizes a television in a room full of people has to hold.
+ *
+ * The inset is five per cent of each edge, measured per axis. On a 1080p set
+ * that is 96px left and right and 54px top and bottom, which leaves a safe area
+ * of 1728x972 inside the frame an old television crops. `vmin` would take five
+ * per cent of the shorter side on both axes and under-inset the long one by
+ * nearly half, which is the whole failure this is guarding against.
+ *
+ * Each size is a clamp whose lower bound is the floor the room needs and whose
+ * middle term reaches its intended size at 1920px wide: body text lands on 36px
+ * and never falls below 32px, and the name of whoever is playing lands on 96px.
+ */
+.salon {
+  --salon-body: clamp(2rem, 1.9vw, 2.75rem);
+  --salon-lead: clamp(2.25rem, 2.6vw, 3.5rem);
+  --salon-name: clamp(3.5rem, 5vw, 7.5rem);
+
+  padding-inline: 5vw;
+  padding-block: 5vh;
+  font-size: var(--salon-body);
+  line-height: 1.3;
+}
+
+.salon-name {
+  font-size: var(--salon-name);
+  line-height: 1.02;
+}
+
+.salon-lead {
+  font-size: var(--salon-lead);
+  line-height: 1.2;
+}
+
+/*
+ * Player-authored text, painted large. It wraps anywhere and is never truncated:
+ * cutting a challenge short hides exactly what the application exists to
+ * announce.
+ */
+.salon-prose {
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+/*
+ * The staging of one version's cards.
+ *
+ * It is animation and never state: the delay orders what a table reads out, and
+ * nothing on any screen advances when it ends. Every step of a turn waits for a
+ * human tap.
+ */
+@keyframes salon-stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.stage-in {
+  animation: salon-stage-in 320ms ease-out both;
+  animation-delay: calc(var(--stage-index, 0) * 420ms + var(--stage-offset, 0ms));
+}
+
+/*
+ * The tile turning over. It runs because the snapshot changed, so the television
+ * runs the same one from the same bytes, and it changes no layout: the face and
+ * the back share a view box.
+ */
+@keyframes salon-flip-in {
+  from {
+    transform: rotateY(84deg);
+  }
+
+  to {
+    transform: rotateY(0);
+  }
+}
+
+.flip-in {
+  animation: salon-flip-in 420ms ease-out both;
+  transform-origin: center;
 }

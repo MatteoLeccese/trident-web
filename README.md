@@ -73,6 +73,48 @@ npm run typecheck # tsc --noEmit
 npm run build
 ```
 
+### The two screens, end to end
+
+`e2e/two-screen.spec.ts` drives the product as it is played: one browser context
+is the phone, holding the write credential in its cookie jar, and another is the
+television, holding nothing. The phone draws; the television has the tile in
+under two seconds; a third context joins mid-game and lands on the board already
+in play.
+
+It needs the real stack — Laravel, Reverb, Postgres and Redis — because there is
+nothing in it to fake. Two commands:
+
+```bash
+cd ../trident-api && docker compose up -d --build api reverb
+cd ../trident-web && npm run test:e2e
+```
+
+The second one builds this app and serves it on **3100**, so it never collides
+with, or reports on, the build the web compose file publishes on 3000. If the
+stack is not up, the run stops before the first test with a line that names the
+command above.
+
+Nothing in that run reads `.env.local`: `NEXT_PUBLIC_*` is inlined at build time,
+so the run builds with the values in `e2e/support/stack.ts` — which is also where
+the API, Reverb and the ports are configured, each with a `TRIDENT_E2E_*`
+override. The reconciliation poll is pushed out to ten minutes there on purpose:
+with no poll inside the run, the socket is the only thing that can explain a
+frame arriving, and the spec also counts the television's HTTP reads to say so.
+
+A whole run is some sixty requests and the API allows a hundred and twenty a
+minute, so two runs back to back reach its rate limit. The preflight recognises
+that answer, says so and waits out the window rather than letting a throttled API
+look like a broken product.
+
+The browser binaries come from `npx playwright install chromium` and live in
+`~/.cache/ms-playwright`; the run needs no display.
+
+```bash
+npm run test:e2e -- --headed          # watch both screens
+npm run test:e2e -- --grep "joining" # one of them
+TRIDENT_E2E_REUSE_SERVER=1 npm run test:e2e   # while iterating: serve the build already there
+```
+
 ---
 
 ## Layout
@@ -99,6 +141,14 @@ httpOnly cookie and strips it from the response. Everything else goes through
 `/api/proxy`, which injects the token server-side. `src/lib/backend.ts` is
 `server-only`, so importing it from a client component is a build error, not a
 production leak.
+
+That cookie is marked `Secure` only when the request being answered really
+arrived over TLS, which the server reads from `x-forwarded-proto`. A browser
+discards a `Secure` cookie set from a plain-HTTP origin without saying so, and
+this product is opened at a LAN address over plain HTTP: marked `Secure` in
+every production build, the phone would arrive at the table with no write
+credential and every tap would come back refused. If you put this behind a TLS
+proxy, the proxy has to send that header.
 
 **Incoming state is guarded, not trusted.** `domains/game/utils/applyGameState.ts`
 is a pure function: it drops anything older than or equal to what is on screen,

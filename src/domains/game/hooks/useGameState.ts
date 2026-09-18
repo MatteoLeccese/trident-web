@@ -6,6 +6,7 @@ import { messageForError } from "@/lib/error-codes";
 import { gameApi } from "@/domains/game/services/gameApi";
 import type { GameState } from "@/domains/game/types";
 import { applyGameState } from "@/domains/game/utils/applyGameState";
+import { isGameState } from "@/domains/game/utils/isGameState";
 
 interface UseGameState {
   state: GameState | null;
@@ -16,7 +17,7 @@ interface UseGameState {
   resync: () => Promise<void>;
 
   /** Delivers a state that arrived over the socket, subject to the version guard. */
-  receive: (incoming: GameState) => void;
+  receive: (incoming: unknown) => void;
 }
 
 export function useGameState (gameId: string): UseGameState {
@@ -24,38 +25,69 @@ export function useGameState (gameId: string): UseGameState {
   const [ error, setError ] = useState<string | null>(null);
   const [ loading, setLoading ] = useState(true);
 
-  // The guard needs the last **confirmed** state without re-creating the
-  // callbacks. It is synced in an effect and not during the render: writing a
-  // ref while rendering is exactly what React forbids.
+  /**
+   * The guard's baseline: the newest state that has been **applied**, which is
+   * not the same thing as the newest state that has been committed.
+   *
+   * It is written the moment a snapshot is accepted, and never only in an effect
+   * after the commit. Two deliveries can land inside one commit window — a
+   * socket frame and the poll's answer, or a write's answer and the frame the
+   * same write broadcast — and a baseline that is a commit behind compares both
+   * against the same older version, so the second one passes the guard whatever
+   * its version and an older frame wins. Dropping a frame that is older or equal
+   * has to be a property of this hook and not only of the pure function
+   * underneath it (documentation/conventions/state-versioning.md).
+   *
+   * Writing it from a callback is not writing it during a render, which is the
+   * thing React forbids.
+   */
   const latest = useRef<GameState | null>(null);
 
-  useEffect(() => {
-    latest.current = state;
-  }, [ state ]);
+  /** The one place a snapshot is accepted. @returns whether a frame went missing. */
+  const apply = useCallback((incoming: GameState): boolean => {
+    const result = applyGameState(latest.current, incoming);
+
+    latest.current = result.state;
+    setState(result.state);
+
+    return result.needsResync;
+  }, []);
 
   const resync = useCallback(async () => {
     try {
       const fresh = await gameApi.get(gameId);
 
-      setState(applyGameState(latest.current, fresh).state);
+      // A read that was in flight while a newer frame arrived must not write its
+      // own older answer back over it.
+      apply(fresh);
       setError(null);
     } catch (caught: unknown) {
       setError(isApiError(caught) ? messageForError(caught) : "We could not load the game.");
     } finally {
       setLoading(false);
     }
-  }, [ gameId ]);
+  }, [ apply, gameId ]);
 
-  const receive = useCallback((incoming: GameState) => {
-    const result = applyGameState(latest.current, incoming);
+  const receive = useCallback((incoming: unknown) => {
 
-    setState(result.state);
+    /*
+     * The socket is the one path where a payload is typed by assertion and not
+     * by the compiler, so it is checked before it can replace the state of a
+     * table in play. A frame that is not a snapshot asks the server instead:
+     * every payload is a full snapshot, so the state still converges, which is
+     * the same self-healing a lost frame takes.
+     */
+    if (!isGameState(incoming)) {
+      void resync();
+
+      return;
+    }
 
     // There was a gap: what arrived was applied, but something may be missing.
-    if (result.needsResync) {
+    if (apply(incoming)) {
       void resync();
     }
-  }, [ resync ]);
+  }, [ apply, resync ]);
 
   useEffect(() => {
     let cancelled = false;

@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import type { ViewerRole } from "@/domains/game/types";
 
 /**
@@ -15,18 +15,37 @@ const GAME_COOKIE = "trident_game";
 
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
   sameSite: "lax",
   path: "/",
   // A game does not last longer than one night.
   maxAge: 60 * 60 * 12,
 } as const;
 
+/**
+ * Whether the request being answered arrived over TLS.
+ *
+ * It is read from the request and never from the build mode. This product is
+ * served over plain HTTP on a home LAN, and a browser silently discards a
+ * `Secure` cookie that a non-trustworthy origin sets: a production build that
+ * marked the cookie `Secure` would leave the phone on `http://192.168.x.x` with
+ * no write credential at all, and every write it made would come back refused.
+ *
+ * A loopback origin is a trustworthy one, which is why a test run on
+ * `127.0.0.1` cannot see that failure and a table can see nothing else.
+ */
+async function overTls (): Promise<boolean> {
+  // The left-most entry is the scheme the browser actually spoke.
+  const forwarded = (await headers()).get("x-forwarded-proto");
+
+  return forwarded !== null && forwarded.split(",")[0]?.trim().toLowerCase() === "https";
+}
+
 export async function rememberController (gameId: string, token: string): Promise<void> {
   const jar = await cookies();
+  const options = { ...COOKIE_OPTIONS, secure: await overTls() };
 
-  jar.set(CONTROLLER_COOKIE, token, COOKIE_OPTIONS);
-  jar.set(GAME_COOKIE, gameId, COOKIE_OPTIONS);
+  jar.set(CONTROLLER_COOKIE, token, options);
+  jar.set(GAME_COOKIE, gameId, options);
 }
 
 export async function controllerToken (): Promise<string | null> {

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { backendFetch } from "@/lib/backend";
+import { issuedGame } from "@/lib/game-issue";
 import { rememberController } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +36,7 @@ export async function POST (request: Request): Promise<Response> {
     );
   }
 
-  const body = await response.json().catch(() => null);
+  const body: unknown = await response.json().catch(() => null);
 
   if (!response.ok || body === null) {
     return NextResponse.json(body ?? {
@@ -46,13 +47,12 @@ export async function POST (request: Request): Promise<Response> {
     }, { status: response.status });
   }
 
-  const token: unknown = body?.data?.controller_token;
-  const game = body?.data?.game;
+  const issued = issuedGame(body);
 
-  if (typeof token === "string" && typeof game?.game_id === "string") {
-    await rememberController(game.game_id, token);
+  if (issued.token !== null && issued.gameId !== null) {
+    await rememberController(issued.gameId, issued.token);
   }
 
   // The token stays here. It does not cross over to the browser even once.
-  return NextResponse.json({ ...body, data: { game } }, { status: response.status });
+  return NextResponse.json(issued.sanitised, { status: response.status });
 }

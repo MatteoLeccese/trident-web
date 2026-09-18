@@ -7,9 +7,9 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
-      // `server-only` sólo exporta bajo la condición "react-server" de Next.
-      // En Vitest no existe esa condición: se neutraliza para poder testear
-      // las funciones puras del BFF. La garantía real la sigue dando el build.
+      // `server-only` exports only under Next's "react-server" condition, which
+      // does not exist in Vitest. It is neutralised so the BFF's pure functions
+      // can be tested; the guarantee itself still comes from the build.
       "server-only": fileURLToPath(new URL("./test/stubs/server-only.ts", import.meta.url)),
     },
   },

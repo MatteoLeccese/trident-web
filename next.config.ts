@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Imagen de Docker mínima: sólo el servidor y sus dependencias reales.
+  // A minimal Docker image: the server and its real dependencies, nothing else.
   output: "standalone",
   reactStrictMode: true,
 };

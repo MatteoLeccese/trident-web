@@ -25,6 +25,27 @@ const ERROR_MESSAGES: Record<string, string> = {
   nickname_taken: "That name is already taken in this game.",
   controller_token_required: "Only the phone running the game can do that.",
   controller_token_invalid: "This phone is no longer running the game.",
+
+  // The write protocol. A reused or malformed intention is a defect in the
+  // client, so the text says what a person can do and nothing more.
+  request_id_reused: "That action was already sent. Give it a moment.",
+  request_id_invalid: "We could not send that. Try again.",
+
+  // The game framework refusing a write the current state does not allow.
+  game_not_in_lobby: "The game has already started.",
+  game_not_running: "The game is not in play right now.",
+  game_already_finished: "This game is over.",
+  pool_position_not_in_pool: "That is not a position on this board.",
+  pool_position_already_taken: "That one is already turned over.",
+  no_pending_choice: "There is nothing waiting to be answered.",
+  seat_not_found: "There is no such seat at this table.",
+  seat_order_invalid: "That is not a valid order for this table.",
+  roster_size_invalid: "That is not a number of players this game takes.",
+
+  // The table's settings, refused against the declaration the lobby form was
+  // generated from.
+  room_config_key_unknown: "This game has no setting by that name.",
+  room_config_value_invalid: "This game does not take that value for one of the settings.",
 };
 
 export function messageForError (error: ApiError): string {

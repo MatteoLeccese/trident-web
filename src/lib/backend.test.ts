@@ -52,15 +52,22 @@ describe("buildBackendUrl", () => {
   });
 
   it("accepts every shape a real route of this API uses", () => {
+    // Every path of the backend, written out rather than assumed: the whitelist
+    // is strict enough that a hyphen in a new segment is worth a test.
+    const id = "0f8fad5b-d9cb-469f-a165-70867728950e";
     const real = [
       [ "health" ],
       [ "games" ],
-      [ "games", "0f8fad5b-d9cb-469f-a165-70867728950e" ],
+      [ "games", id ],
       [ "games", "by-code", "K7QP3M" ],
-      [ "games", "abc", "seats", "3" ],
-      [ "games", "abc", "tiles", "36", "draw" ],
-      [ "games", "abc", "claim-controller" ],
-      [ "games", "abc", "play-again" ],
+      [ "games", id, "room-config-spec" ],
+      [ "games", id, "seats", "3" ],
+      [ "games", id, "seats", "order" ],
+      [ "games", id, "room-config" ],
+      [ "games", id, "start" ],
+      [ "games", id, "pool", "36", "draw" ],
+      [ "games", id, "play-again" ],
+      [ "broadcasting", "auth" ],
     ];
 
     for (const segments of real) {
@@ -80,6 +87,14 @@ describe("buildBackendUrl", () => {
 });
 
 describe("forwardableHeaders", () => {
+  it("forwards the write intention, which the idempotency ledger is keyed by", () => {
+    // Without this header crossing the proxy, every retry would be a new
+    // intention and a double tap would turn two tiles over.
+    const forwarded = forwardableHeaders(new Headers({ "x-request-id": "2bf1d0a0-0b9a-4f1e-8a34-4a1f4a2d1c77" }));
+
+    expect(forwarded.get("x-request-id")).toBe("2bf1d0a0-0b9a-4f1e-8a34-4a1f4a2d1c77");
+  });
+
   it("forwards only what the backend needs", () => {
     const incoming = new Headers({
       "content-type": "application/json",
