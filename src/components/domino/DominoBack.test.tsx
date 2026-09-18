@@ -67,13 +67,25 @@ describe("a tile face down", () => {
     expect(svg?.getAttribute("style")).toContain(`rotate(${backTiltDegrees(5)}deg)`);
   });
 
-  it("shows the brass emblem", () => {
+  it("is drawn as the back of a domino and not as an emblem", () => {
+    // The same bone body and the same edge as a face, in the tone the material
+    // takes on the other side, with an inset bevel and nothing on top of it.
     const { container } = render(<DominoBack position={5} />);
-    const emblem = container.querySelector("[data-emblem]");
+    const body = container.querySelector("svg > rect");
 
-    expect(emblem).not.toBeNull();
-    expect(emblem?.getAttribute("stroke")).toBe("var(--accent)");
-    expect(emblem?.querySelectorAll("path").length).toBeGreaterThan(0);
+    expect(body?.getAttribute("fill")).toBe("var(--tile-back)");
+    expect(body?.getAttribute("stroke")).toBe("var(--tile-edge)");
+    expect(container.querySelector("[data-bevel]")).not.toBeNull();
+    expect(container.querySelector("[data-emblem]")).toBeNull();
+    expect(container.querySelectorAll("path")).toHaveLength(0);
+  });
+
+  it("carries no divider, which is what a face has", () => {
+    // A face is split across the middle. Without that line a tile face down can
+    // never be mistaken for the double blank.
+    const { container } = render(<DominoBack position={5} />);
+
+    expect(container.querySelectorAll("line")).toHaveLength(0);
   });
 
   it("shows no face at all", () => {

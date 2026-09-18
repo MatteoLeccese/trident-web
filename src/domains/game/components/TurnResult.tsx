@@ -1,6 +1,6 @@
 "use client";
 
-import type { Effect, RoomConfig, Seat } from "@/domains/game/types";
+import type { Effect, RoomConfig, RoomConfigSpec, Seat } from "@/domains/game/types";
 import { CurrentPlayer } from "@/domains/game/components/CurrentPlayer";
 import { EffectList } from "@/domains/game/components/EffectList";
 import { DominoFace } from "@/components/domino/DominoFace";
@@ -39,6 +39,9 @@ interface Props {
   roomConfig: RoomConfig;
   seats: Seat[];
 
+  /** The ruleset's declaration, which is where a challenge card takes its title from. */
+  spec?: RoomConfigSpec | null;
+
   onContinue: () => void;
 }
 
@@ -51,6 +54,7 @@ export function TurnResult ({
   version,
   roomConfig,
   seats,
+  spec = null,
   onContinue,
 }: Props) {
   return (
@@ -70,6 +74,7 @@ export function TurnResult ({
         version={version}
         roomConfig={roomConfig}
         seats={seats}
+        spec={spec}
         viewerSeat={holderSeat}
 
         /* The tile has the first beat of the staging; the cards follow it. */

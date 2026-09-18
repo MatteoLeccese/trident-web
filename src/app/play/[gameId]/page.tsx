@@ -15,6 +15,7 @@ import { TurnResult } from "@/domains/game/components/TurnResult";
 import { useGameChannel } from "@/domains/game/hooks/useGameChannel";
 import { useGameState } from "@/domains/game/hooks/useGameState";
 import { useReconcile } from "@/domains/game/hooks/useReconcile";
+import { useRoomConfigSpec } from "@/domains/game/hooks/useRoomConfigSpec";
 import { useTurnSequence } from "@/domains/game/hooks/useTurnSequence";
 import { gameApi } from "@/domains/game/services/gameApi";
 import { boardIsMounted, phoneSeat } from "@/domains/game/utils/turnSequence";
@@ -61,6 +62,12 @@ export default function PlayPage ({ params }: PageProps<"/play/[gameId]">) {
   useReconcile({ resync: reconcile, everyMs: status === "connected" ? null : OFFLINE_POLL_MS });
 
   const turn = useTurnSequence({ gameId, state, receive });
+
+  /*
+   * The declaration a challenge card takes its title from. It is read once and
+   * not watched: it belongs to the ruleset and no write changes it.
+   */
+  const { spec } = useRoomConfigSpec(gameId);
 
   const [ rematching, setRematching ] = useState(false);
   const [ rematchError, setRematchError ] = useState<string | null>(null);
@@ -133,6 +140,7 @@ export default function PlayPage ({ params }: PageProps<"/play/[gameId]">) {
         version={state.version}
         roomConfig={state.room_config}
         seats={state.seats}
+        spec={spec}
 
         // There is a next turn to hand the phone on to only while the game runs.
         onContinue={state.status === "running" ? turn.advance : turn.dismiss}
@@ -191,6 +199,7 @@ export default function PlayPage ({ params }: PageProps<"/play/[gameId]">) {
           version={state.version}
           roomConfig={state.room_config}
           seats={state.seats}
+          spec={spec}
         />
       )}
 
@@ -214,6 +223,7 @@ export default function PlayPage ({ params }: PageProps<"/play/[gameId]">) {
           version={state.version}
           roomConfig={state.room_config}
           seats={state.seats}
+          spec={spec}
           viewerSeat={state.current_seat}
         />
       )}

@@ -36,6 +36,7 @@
 
   /* The tiles are bone in both themes: that is what they are made of. */
   --tile-face: oklch(0.975 0.010 95);
+  --tile-back: oklch(0.915 0.014 95);
   --tile-pip: oklch(0.230 0.030 158);
   --tile-edge: oklch(0.860 0.015 110);
 
@@ -67,6 +68,7 @@
   --success: oklch(0.680 0.110 155);
 
   --tile-face: oklch(0.900 0.015 95);
+  --tile-back: oklch(0.815 0.020 95);
   --tile-pip: oklch(0.180 0.025 158);
   --tile-edge: oklch(0.700 0.020 110);
 }
@@ -88,6 +90,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-tile-face: var(--tile-face);
+  --color-tile-back: var(--tile-back);
   --color-tile-pip: var(--tile-pip);
   --color-tile-edge: var(--tile-edge);
 

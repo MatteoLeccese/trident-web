@@ -42,7 +42,7 @@ describe("a place on the board with no tile in it", () => {
 
     expect(container.querySelector("[data-pips]")).toBeNull();
     expect(container.querySelector("[data-seat]")).toBeNull();
-    expect(container.querySelector("[data-emblem]")).toBeNull();
+    expect(container.querySelector("[data-bevel]")).toBeNull();
     expect(container.querySelectorAll("circle")).toHaveLength(0);
   });
 

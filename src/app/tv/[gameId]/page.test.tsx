@@ -19,11 +19,12 @@ import { gameState, pool, seat } from "@/domains/game/testing/snapshot";
 
 const mocks = vi.hoisted(() => ({
   get: vi.fn(),
+  spec: vi.fn(),
   channel: vi.fn(),
 }));
 
 vi.mock("@/domains/game/services/gameApi", () => ({
-  gameApi: { get: mocks.get },
+  gameApi: { get: mocks.get, roomConfigSpec: mocks.spec },
 }));
 
 vi.mock("@/domains/game/hooks/useGameChannel", () => ({
@@ -103,12 +104,33 @@ const PLAYED = { 3: "21", 4: "50", 11: "62" };
 
 const TAKERS = { takers: { 3: 2, 4: 3, 11: 2 } };
 
+/** An opaque declaration: a card takes its title from this and never from the key. */
+const SPEC = {
+  rule_set_id: "some.ruleset",
+  fields: [
+    { key: "some.setting", kind: "text", label: "A Thing", default: "x", max_length: 80, options: [] },
+  ],
+};
+
+/** Hands a new snapshot to the screen the way the socket does. */
+function receive (state: GameState): void {
+  const options = mocks.channel.mock.calls.at(-1)?.[0] as { onState: (received: unknown) => void; } | undefined;
+
+  if (options === undefined) {
+    throw new Error("The screen never subscribed to a channel.");
+  }
+
+  options.onState(state);
+}
+
 beforeEach(() => {
   vi.stubGlobal("ResizeObserver", StubResizeObserver);
+  mocks.spec.mockResolvedValue(SPEC);
 });
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -137,7 +159,7 @@ describe("the board on a television", () => {
     }));
 
     expect(cell(5).querySelector("[data-seat]")).toBeNull();
-    expect(cell(5).querySelector("[data-emblem]")).not.toBeNull();
+    expect(cell(5).querySelector("[data-bevel]")).not.toBeNull();
   });
 
   it("keeps the taken tiles on the board when the snapshot keeps them there", async () => {
@@ -262,5 +284,99 @@ describe("the board on a television when the game is over", () => {
 
     expect(document.querySelector("[data-watch-another]")).not.toBeNull();
     expect(document.querySelector("[data-play-again]")).toBeNull();
+  });
+});
+
+describe("the last draw on a television", () => {
+  const RUNNING = gameState({
+    status: "running",
+    currentSeat: 2,
+    seats: SEATS,
+    pool: pool(49, PLAYED, TAKERS),
+    lastDraw: { position: 11, tile: "62", seat: 3 },
+    effects: [ { kind: "challenge", seat: 3, config_key: "some.setting" } ],
+  });
+
+  it("says whose draw the cards belong to, which is not the seat it says is playing", async () => {
+    // The defect this exists for: the cursor names the next seat and the cards
+    // below it belong to the draw before, so unlabelled the room reads them as
+    // the current player's choice.
+    await openOn(RUNNING);
+
+    expect(document.querySelector("[data-current-player-name]")?.textContent).toBe("Bruno");
+    expect(document.querySelector("[data-last-play]")?.textContent).toContain("Last play by");
+    expect(document.querySelector("[data-last-play-name]")?.textContent).toBe("Carla");
+  });
+
+  it("heads a challenge with the label the ruleset declares", async () => {
+    await openOn(RUNNING);
+
+    await waitFor(() => expect(document.querySelector("[data-challenge-title]")).not.toBeNull());
+
+    expect(document.querySelector("[data-challenge-title]")?.textContent).toBe("A Thing");
+    expect(document.querySelector("[data-challenge-recipient-name]")?.textContent).toBe("Carla");
+  });
+});
+
+describe("the end of the game on a television", () => {
+  it("holds the last turn on its own before the record replaces it", async () => {
+    // The write that turns over the last tile is the write that finishes the
+    // game (TR-34) and it fires that tile's challenges (TR-38). Painted in the
+    // same frame as the record, the last thing the table is asked for all night
+    // is read by nobody.
+    await openOn(gameState({
+      status: "running",
+      currentSeat: 2,
+      seats: SEATS,
+      pool: pool(49, PLAYED, TAKERS),
+    }));
+
+    const finished = gameState({
+      status: "finished",
+      joinCode: null,
+      currentSeat: null,
+      version: 60,
+      seats: SEATS,
+      pool: pool(49, PLAYED, TAKERS),
+      lastDraw: { position: 11, tile: "62", seat: 2 },
+      effects: [ { kind: "challenge", seat: 2, config_key: "some.setting" } ],
+    });
+
+    mocks.get.mockResolvedValue(finished);
+    vi.useFakeTimers();
+
+    act(() => receive(finished));
+
+    expect(document.querySelector("[data-final-beat]")).not.toBeNull();
+    expect(document.querySelector("[data-tile-grid]")).toBeNull();
+    expect(document.querySelector("[data-last-play-name]")?.textContent).toBe("Bruno");
+    expect(document.querySelector("[data-challenge-card]")).not.toBeNull();
+
+    // Comfortably past the beat and short of the reconcile poll, so what lands
+    // here is the beat ending and never a refetch.
+    act(() => void vi.advanceTimersByTime(20_000));
+
+    expect(document.querySelector("[data-final-beat]")).toBeNull();
+    expect(document.querySelector("[data-tile-grid]")).not.toBeNull();
+  });
+
+  it("keeps the last cards beside the record, so a challenge in progress stays on screen", async () => {
+    await openOn(gameState({
+      status: "finished",
+      joinCode: null,
+      currentSeat: null,
+      version: 60,
+      seats: SEATS,
+      pool: pool(49, PLAYED, TAKERS),
+      lastDraw: { position: 11, tile: "62", seat: 2 },
+      effects: [ { kind: "challenge", seat: 2, config_key: "some.setting" } ],
+    }));
+
+    // Opened on a game that was already over: there is no last turn this screen
+    // watched happen, so it lands on the record with no beat at all.
+    expect(document.querySelector("[data-final-beat]")).toBeNull();
+    expect(document.querySelector("[data-tile-grid]")).not.toBeNull();
+    expect(document.querySelector("[data-challenge-card]")).not.toBeNull();
+    expect(document.querySelector("[data-last-play-name]")?.textContent).toBe("Bruno");
   });
 });

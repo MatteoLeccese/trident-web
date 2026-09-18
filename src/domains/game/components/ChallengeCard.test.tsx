@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ChallengeCard } from "./ChallengeCard";
-import type { ChallengeEffect } from "@/domains/game/types";
+import type { ChallengeEffect, RoomConfigSpec } from "@/domains/game/types";
 import { seat } from "@/domains/game/testing/snapshot";
 
 /**
@@ -16,6 +16,14 @@ afterEach(cleanup);
 const SEATS = [ seat(1, "Ana"), seat(2, "Bruno"), seat(3, "Carla") ];
 
 const CONFIG = { "some.setting": "Do the thing.", "other.setting": "Do the other thing." };
+
+const SPEC: RoomConfigSpec = {
+  rule_set_id: "some.ruleset",
+  fields: [
+    { key: "some.setting", kind: "text", label: "A Thing", default: "x", max_length: 80, options: [] },
+    { key: "other.setting", kind: "text", label: "Another Thing", default: "x", max_length: 80, options: [] },
+  ],
+};
 
 function challenge (to: number | null, key = "some.setting"): ChallengeEffect {
   return { kind: "challenge", seat: to, config_key: key };
@@ -68,7 +76,51 @@ describe("a challenge card", () => {
   it("addresses the whole table when the effect names no seat", () => {
     render(<ChallengeCard effect={challenge(null)} roomConfig={CONFIG} seats={SEATS} viewerSeat={1} />);
 
-    expect(screen.getByText("Everyone")).toBeInTheDocument();
+    expect(screen.getByText("the table")).toBeInTheDocument();
+  });
+
+  it("heads the card with the label the declaration carries", () => {
+    render(<ChallengeCard effect={challenge(1)} roomConfig={CONFIG} seats={SEATS} spec={SPEC} />);
+
+    expect(screen.getByText("A Thing")).toBeInTheDocument();
+  });
+
+  it("heads the card with nothing at all when the declaration is not in hand", () => {
+    // The spec is a request of its own and it can be in flight or have failed.
+    // The card still paints what the table has to do.
+    const { container } = render(<ChallengeCard effect={challenge(1)} roomConfig={CONFIG} seats={SEATS} />);
+
+    expect(container.querySelector("[data-challenge-title]")).toBeNull();
+    expect(screen.getByText("Do the thing.")).toBeInTheDocument();
+  });
+
+  it("puts the title above the text and the recipient below it", () => {
+    // What the card is, then what to do, then who does it. A recipient painted
+    // largest reads as the card being about the person.
+    const { container } = render(
+      <ChallengeCard effect={challenge(3)} roomConfig={CONFIG} seats={SEATS} spec={SPEC} size="tv" />,
+    );
+
+    const painted = Array.from(container.querySelectorAll("[data-challenge-card] > p"))
+      .map((node) => node.textContent);
+
+    expect(painted).toEqual([ "A Thing", "Do the thing.", "Answered byCarla" ]);
+    expect(container.querySelector("[data-challenge-title]")?.className).toContain("salon-name");
+  });
+
+  it("never composes a title out of the settings key", () => {
+    // The key is the ruleset's namespace, and a screen that split one to find a
+    // noun inside it would be naming a rule.
+    const { container } = render(
+      <ChallengeCard
+        effect={challenge(1, "challenge.face.3")}
+        roomConfig={{ "challenge.face.3": "Do the thing." }}
+        seats={SEATS}
+      />,
+    );
+
+    expect(container.querySelector("[data-challenge-title]")).toBeNull();
+    expect(container.textContent).not.toContain("3");
   });
 
   it("paints no card for a key the settings do not carry", () => {

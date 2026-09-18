@@ -1,22 +1,26 @@
 import type { CSSProperties } from "react";
-import type { ChallengeEffect, RoomConfig, Seat } from "@/domains/game/types";
+import type { ChallengeEffect, RoomConfig, RoomConfigSpec, Seat } from "@/domains/game/types";
 import { seatLabel } from "@/domains/game/utils/seats";
+import { settingLabel } from "@/domains/game/utils/settingLabel";
 import { settingText } from "@/domains/game/utils/settingText";
 import { cn } from "@/lib/utils";
 
 /**
- * One challenge, as the table reads it out.
+ * One challenge, as the table reads it out: what it is, then what to do, then
+ * who does it.
  *
- * Two fields of the effect and nothing else: `config_key` is looked up in the
- * flat settings map the snapshot carries, and `seat` is the **recipient**, which
- * the ruleset decided. This component never works out who a challenge belongs
- * to, and it could not: it does not know what a face, a role or a stage is.
+ * **The title is the declared label of the key and never a word this file
+ * composed.** A screen that took the face out of a settings key would be reading
+ * a rule off a setting, so the name arrives with the ruleset's declaration or it
+ * does not arrive at all: without the declaration in hand the card is painted
+ * untitled, which is the state of a screen whose spec request is still in
+ * flight.
  *
- * That is also what makes the one card in the game addressed to somebody who is
- * not holding the phone work without a special case. It is a card whose `seat`
- * happens to differ from the seat holding the screen, so it is painted the way
- * every card is — with its recipient's name large — and the television paints it
- * identically from the same bytes.
+ * The recipient is last and small, and it is still here. It is the ruleset's
+ * answer and not this component's — the one card in the game addressed to
+ * somebody other than whoever drew the tile is the reason `Effect` carries a
+ * recipient at all — and dropping it would take the only asymmetry of the game
+ * off the screen and leave the room to remember it.
  *
  * The text is the table's, untrusted and painted at the size of a room. It is
  * rendered as text and never as markup, it wraps anywhere, and it is never
@@ -33,6 +37,9 @@ interface Props {
   roomConfig: RoomConfig;
   seats: Seat[];
 
+  /** The ruleset's declaration, which is where the card's title comes from. */
+  spec?: RoomConfigSpec | null;
+
   /** The seat holding this screen, so the card can show that it names somebody else. */
   viewerSeat?: number | null;
 
@@ -42,7 +49,15 @@ interface Props {
   index?: number;
 }
 
-export function ChallengeCard ({ effect, roomConfig, seats, viewerSeat = null, size = "phone", index = 0 }: Props) {
+export function ChallengeCard ({
+  effect,
+  roomConfig,
+  seats,
+  spec = null,
+  viewerSeat = null,
+  size = "phone",
+  index = 0,
+}: Props) {
   const text = settingText(roomConfig, effect.config_key);
 
   if (text === null) {
@@ -50,7 +65,8 @@ export function ChallengeCard ({ effect, roomConfig, seats, viewerSeat = null, s
   }
 
   const isTv = size === "tv";
-  const recipient = effect.seat === null ? null : seatLabel(seats, effect.seat);
+  const title = settingLabel(spec, effect.config_key);
+  const recipient = effect.seat === null ? "the table" : seatLabel(seats, effect.seat);
   const elsewhere = effect.seat !== null && viewerSeat !== null && effect.seat !== viewerSeat;
 
   return (
@@ -60,21 +76,34 @@ export function ChallengeCard ({ effect, roomConfig, seats, viewerSeat = null, s
       style={{ "--stage-index": index } as CSSProperties}
       className={cn(
         "stage-in flex flex-col gap-3 rounded-2xl border bg-card",
-        isTv ? "gap-5 p-[1.2em]" : "p-5",
+        isTv ? "gap-4 p-[1.2em]" : "p-5",
         elsewhere ? "border-accent" : "border-border",
       )}
     >
-      <p
-        data-challenge-recipient=""
-        className={cn(
-          "salon-prose font-bold tracking-tight",
-          isTv ? "salon-name" : "text-3xl",
-          elsewhere && "text-accent",
-        )}
-      >
-        {recipient ?? "Everyone"}
-      </p>
+      {title !== null && (
+        <p
+          data-challenge-title=""
+          className={cn("salon-prose font-bold tracking-tight", isTv ? "salon-name" : "text-3xl")}
+        >
+          {title}
+        </p>
+      )}
+
       <p className={cn("salon-prose", isTv ? "salon-lead" : "text-xl")}>{text}</p>
+
+      {recipient !== null && (
+        <p
+          data-challenge-recipient=""
+          className={cn(
+            "flex flex-wrap items-baseline gap-2",
+            isTv ? "text-[0.6em]" : "text-sm",
+            elsewhere ? "text-accent" : "text-muted-foreground",
+          )}
+        >
+          <span className="font-mono uppercase tracking-[0.2em]">Answered by</span>
+          <span data-challenge-recipient-name="" className="salon-prose font-semibold">{recipient}</span>
+        </p>
+      )}
     </article>
   );
 }

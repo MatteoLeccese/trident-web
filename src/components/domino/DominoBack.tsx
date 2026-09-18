@@ -8,12 +8,17 @@ import { TILE_VIEWBOX } from "./dominoPips";
  * occupy the same geometry, so the swap changes no layout and the board around
  * it does not move.
  *
- * It carries the product's brass emblem — decoration, and never the machine
- * token of the same name, which this file neither reads nor could recognise —
- * and a tilt of a couple of degrees that is a function of the position, so that
- * a pool reads as tiles laid on a table and not as a spreadsheet of identical
- * rectangles. The tilt is a transform and never a layout property: it moves no
- * neighbour.
+ * It is drawn as the back of a domino and carries no emblem: the same bone body
+ * and the same edge as a face, in the darker tone the material takes on the
+ * other side, with an inset bevel and nothing else. The bevel is also what
+ * separates it from a face at a glance — a face is split across the middle by
+ * its divider, and a back never is, which is what keeps a tile face down from
+ * reading as the double blank.
+ *
+ * It carries a tilt of a couple of degrees that is a function of the position,
+ * so that a pool reads as tiles laid on a table and not as a spreadsheet of
+ * identical rectangles. The tilt is a transform and never a layout property: it
+ * moves no neighbour.
  */
 
 /** The widest the tilt goes, in degrees. */
@@ -69,40 +74,21 @@ export function DominoBack ({ position, className }: Props) {
         width="98"
         height="198"
         rx="10"
-        fill="var(--primary)"
+        fill="var(--tile-back)"
         stroke="var(--tile-edge)"
         strokeWidth="2"
       />
       <rect
+        data-bevel=""
         x="9"
         y="9"
         width="82"
         height="182"
         rx="6"
         fill="none"
-        stroke="var(--accent)"
-        strokeWidth="1.5"
-        opacity="0.5"
+        stroke="var(--tile-edge)"
+        strokeWidth="2"
       />
-      <g
-        data-emblem=""
-        fill="none"
-        stroke="var(--accent)"
-        strokeWidth="6"
-        strokeLinecap="round"
-        opacity="0.9"
-      >
-        <path d="M50 44 V156" />
-        <path d="M28 56 V80" />
-        <path d="M72 56 V80" />
-        <path d="M28 80 H72" />
-        <path d="M40 120 H60" />
-      </g>
-      <g fill="var(--accent)" opacity="0.9">
-        <path d="M50 26 L43 48 L57 48 Z" />
-        <path d="M28 34 L22 58 L34 58 Z" />
-        <path d="M72 34 L66 58 L78 58 Z" />
-      </g>
     </svg>
   );
 }

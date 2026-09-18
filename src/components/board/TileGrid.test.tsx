@@ -225,7 +225,7 @@ describe("a position on the board", () => {
 
     measure(PHONE);
 
-    expect(cell(container, 4).querySelector("[data-emblem]")).not.toBeNull();
+    expect(cell(container, 4).querySelector("[data-bevel]")).not.toBeNull();
     expect(cell(container, 4).querySelector("[data-pips]")).toBeNull();
   });
 
@@ -237,7 +237,7 @@ describe("a position on the board", () => {
     measure(PHONE);
 
     expect(cell(container, 7).querySelector("[data-pips]")).not.toBeNull();
-    expect(cell(container, 8).querySelector("[data-emblem]")).not.toBeNull();
+    expect(cell(container, 8).querySelector("[data-bevel]")).not.toBeNull();
     expect(cells(container)).toHaveLength(49);
   });
 
@@ -348,7 +348,7 @@ describe("the tiles the table has drawn", () => {
     measure(PHONE);
 
     expect(cells(container)).toHaveLength(49);
-    expect(cell(container, 8).querySelector("[data-emblem]")).not.toBeNull();
+    expect(cell(container, 8).querySelector("[data-bevel]")).not.toBeNull();
     expect(container.querySelectorAll("[data-off-board]")).toHaveLength(2);
   });
 
@@ -373,7 +373,7 @@ describe("the tiles the table has drawn", () => {
 
     expect(cell(container, 9).querySelector("[data-gap]")).toBeNull();
     expect(cell(container, 9).querySelector("[data-pips]")).not.toBeNull();
-    expect(cell(container, 30).querySelector("[data-emblem]")).not.toBeNull();
+    expect(cell(container, 30).querySelector("[data-bevel]")).not.toBeNull();
   });
 
   it("paints the record instead when the caller does not honour the snapshot's answer", () => {

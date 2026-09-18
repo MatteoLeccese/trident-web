@@ -205,7 +205,7 @@ export async function startGame (page: Page): Promise<void> {
 
 /** The lowest position the board still shows face down, which is a position a tap can take. */
 export async function firstFaceDown (page: Page): Promise<number> {
-  const positions = await positionsWith(page, "[data-emblem]");
+  const positions = await positionsWith(page, "[data-bevel]");
 
   expect(positions.length).toBeGreaterThan(0);
 

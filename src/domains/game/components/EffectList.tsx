@@ -1,4 +1,4 @@
-import type { Effect, RoomConfig, Seat } from "@/domains/game/types";
+import type { Effect, RoomConfig, RoomConfigSpec, Seat } from "@/domains/game/types";
 import { EffectBanner } from "@/domains/game/components/EffectBanner";
 import { paintableEffects } from "@/domains/game/utils/effects";
 import { cn } from "@/lib/utils";
@@ -33,6 +33,9 @@ interface Props {
   roomConfig: RoomConfig;
   seats: Seat[];
 
+  /** The ruleset's declaration, which is where a challenge card takes its title from. */
+  spec?: RoomConfigSpec | null;
+
   /** The seat holding this screen. */
   viewerSeat?: number | null;
 
@@ -49,6 +52,7 @@ export function EffectList ({
   version,
   roomConfig,
   seats,
+  spec = null,
   viewerSeat = null,
   size = "phone",
   offset = 0,
@@ -68,6 +72,7 @@ export function EffectList ({
           effect={effect}
           roomConfig={roomConfig}
           seats={seats}
+          spec={spec}
           viewerSeat={viewerSeat}
           size={size}
           index={offset + index}
