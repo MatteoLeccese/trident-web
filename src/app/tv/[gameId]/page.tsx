@@ -9,6 +9,7 @@ import { GameOverScreen } from "@/domains/game/components/GameOverScreen";
 import { IdleNotice } from "@/domains/game/components/IdleNotice";
 import { LastPlay } from "@/domains/game/components/LastPlay";
 import { SeatList } from "@/domains/game/components/SeatList";
+import { useCardBeat } from "@/domains/game/hooks/useCardBeat";
 import { useFinalBeat } from "@/domains/game/hooks/useFinalBeat";
 import { useGameChannel } from "@/domains/game/hooks/useGameChannel";
 import { useGameState } from "@/domains/game/hooks/useGameState";
@@ -50,6 +51,16 @@ const RECONCILE_MS = pollIntervalMs(process.env.NEXT_PUBLIC_TRIDENT_RECONCILE_PO
  */
 const FINAL_BEAT_MS = 15_000;
 
+/**
+ * How long the cards a draw fired hold the screen before the board comes back.
+ *
+ * Long enough for a room to read two of them out loud; short enough that the
+ * next person is not waiting on the television to get out of the way. The phone
+ * keeps holding the same cards until somebody taps through them, so this is how
+ * long the room is *shown* them, not how long it has to act on them.
+ */
+const CARD_BEAT_MS = 9_000;
+
 export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
   const { gameId } = use(params);
   const { state, error, loading, resync, receive } = useGameState(gameId);
@@ -85,6 +96,21 @@ export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
   const holdingLastTurn = useFinalBeat(
     state === null ? "unknown" : settled ? "over" : "live",
     FINAL_BEAT_MS,
+  );
+
+  /*
+   * Whether a draw's cards are currently over the board.
+   *
+   * They used to sit beside it in two columns, which cost the board a quarter of
+   * its tile on a 1080p set and, on a 720p one, cost the room the bottom of the
+   * board altogether: the two-column arrangement did not fit and answered by
+   * scrolling, and nobody scrolls a television. Measured in
+   * `tileGridSolver.tv.test.ts`.
+   */
+  const featuringCards = useCardBeat(
+    state?.version ?? 0,
+    state !== null && paintableEffects(state.effects).length > 0,
+    CARD_BEAT_MS,
   );
 
   if (loading) {
@@ -152,12 +178,24 @@ export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
         * room's biggest text would otherwise tell four of five players it is
         * somebody's turn on a game that has ended.
         */}
-      <CurrentPlayer
-        label={inPlay ? "Now playing" : "This table"}
-        name={inPlay ? seatLabel(state.seats, state.current_seat) : null}
-        fallback={isOver ? "The game has ended" : "The game has not started"}
-        size="tv"
-      />
+      {/*
+        * Whose turn it is, and whose draw the board is currently recording. They
+        * are two different seats for the length of one tap — the cursor already
+        * names the next one — and side by side with their own labels the room
+        * reads them as two facts instead of as one confusing sentence.
+        */}
+      <div className="flex flex-wrap items-end justify-between gap-[0.8em]">
+        <CurrentPlayer
+          label={inPlay ? "Now playing" : "This table"}
+          name={inPlay ? seatLabel(state.seats, state.current_seat) : null}
+          fallback={isOver ? "The game has ended" : "The game has not started"}
+          size="tv"
+        />
+
+        {inPlay && state.last_draw !== null && (
+          <LastPlay draw={state.last_draw} seats={state.seats} size="tv" />
+        )}
+      </div>
 
       {/*
         * The end of the game, in two beats.
@@ -224,35 +262,43 @@ export default function TvPage ({ params }: PageProps<"/tv/[gameId]">) {
         </div>
       )}
 
+      {/*
+        * The board has the whole screen, and the cards are painted over it for a
+        * beat when they fire.
+        *
+        * Sharing the row cost the board a quarter of its tile on a 1080p
+        * television and, on a 720p one, cost the room the bottom of the board
+        * entirely: the arrangement did not fit and answered by scrolling, which
+        * on a television means those positions are simply never seen. Over the
+        * board the cards get the whole screen too, so both are large because
+        * they stopped being large at the same time.
+        */}
       {!isOver && inPlay && (
-        <div className="grid min-h-0 flex-1 gap-[1em] lg:grid-cols-[1fr_1.1fr]">
-          <div className="flex min-h-0 flex-col gap-[0.8em] overflow-y-auto">
-
-            {/*
-              * Whose draw these cards belong to, said out loud. The cursor above
-              * names the next seat and these belong to the draw before it: both
-              * are right, and unlabelled the room reads them as one sentence.
-              */}
-            {state.last_draw !== null && <LastPlay draw={state.last_draw} seats={state.seats} size="tv" />}
-
-            {/*
-              * No seat is passed as the viewer: a television speaks for the room
-              * and not for anybody at it. Every card is painted the same way —
-              * including the one addressed to somebody who is not holding the
-              * phone, which needs no special case here because the recipient
-              * travels inside the effect.
-              */}
-            <EffectList
-              effects={state.effects}
-              version={state.version}
-              roomConfig={state.room_config}
-              seats={state.seats}
-              spec={spec}
-              size="tv"
-            />
-          </div>
-
+        <div className="relative flex min-h-0 flex-1 flex-col">
           <TileGrid positions={state.pool} gap={14} className="min-h-0" />
+
+          {featuringCards && hasCards && (
+            <div
+              data-card-beat=""
+              className="absolute inset-0 flex flex-col justify-center gap-[1em] overflow-y-auto bg-background/95 backdrop-blur-sm"
+            >
+              {/*
+                * No seat is passed as the viewer: a television speaks for the
+                * room and not for anybody at it. Every card is painted the same
+                * way — including the one addressed to somebody who is not
+                * holding the phone, which needs no special case here because the
+                * recipient travels inside the effect.
+                */}
+              <EffectList
+                effects={state.effects}
+                version={state.version}
+                roomConfig={state.room_config}
+                seats={state.seats}
+                spec={spec}
+                size="tv"
+              />
+            </div>
+          )}
         </div>
       )}
 

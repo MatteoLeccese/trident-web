@@ -14,17 +14,32 @@ The API owns the shared Docker network, so **start it first** — see
 [`../trident-api/README.md`](../trident-api/README.md).
 
 ```bash
-cp .env.example.local .env.local   # first time only
-
+cp .env.example .env
 docker compose up -d --build
 ```
+
+That is the whole first-time setup: the template is filled in and works against
+the API on this machine.
 
 ```bash
 curl -s localhost:3000/api/health
 # {"status":"ok"}
 ```
 
-Open http://localhost:3000.
+Open `http://localhost:3000` on the phone and `http://localhost:3000/tv` on the
+television. **Use a separate browser profile, another browser or a private window
+for the television** — sharing a cookie jar gives it the controller credential,
+and then it is not a television.
+
+### One thing that surprises everybody
+
+Every variable named `NEXT_PUBLIC_*` is **inlined into the bundle when the image
+is built**, not read when it runs. Setting one on a running container changes
+nothing, silently. Changing one means:
+
+```bash
+docker compose up -d --build
+```
 
 ### Without Docker
 
@@ -57,14 +72,34 @@ ipconfig.exe | grep -A5 -i 'Wi-Fi' | grep IPv4
 | Television (watches) | `http://<lan-ip>:3000/tv`, then types the six-character code |
 
 The Reverb host is resolved in the browser from the page's own origin, so the
-image does **not** need rebuilding when your network changes. What does have to
-match is `NEXT_PUBLIC_REVERB_APP_KEY` here and `REVERB_APP_KEY` on the API, and
-the API's `REVERB_ALLOWED_ORIGINS` has to include your LAN range (the default
-covers `192.168.*`, `10.*` and `172.*`).
+image does **not** need rebuilding when your network changes — leave
+`NEXT_PUBLIC_REVERB_HOST` empty and it follows you.
+
+Two things do have to match, and both live on the API side:
+
+- `NEXT_PUBLIC_REVERB_APP_KEY` here and `REVERB_APP_KEY` there.
+- `REVERB_ALLOWED_ORIGINS` there has to include your LAN range, and
+  `FRONTEND_URL` has to be the address the phones actually load.
 
 ---
 
-## Tests
+## Checks
+
+Everything that has to be green, in one command:
+
+```bash
+npm run check     # lint, typecheck, Vitest, build
+```
+
+There is no CI and there will not be one. These run locally before a session
+closes, and they bind. The end-to-end suite is separate because it needs the
+whole stack up:
+
+```bash
+npm run test:e2e
+```
+
+### Running parts of it
 
 ```bash
 npm test          # Vitest
